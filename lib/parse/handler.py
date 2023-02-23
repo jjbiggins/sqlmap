@@ -47,7 +47,12 @@ class FingerprintHandler(ContentHandler):
             self._regexp = sanitizeStr(attrs.get("value"))
             _ = re.match(r"\A[A-Za-z0-9]+", self._regexp)  # minor trick avoiding compiling of large amount of regexes
 
-            if _ and self._banner and _.group(0).lower() in self._banner.lower() or not _:
+            if (
+                _
+                and self._banner
+                and _[0].lower() in self._banner.lower()
+                or not _
+            ):
                 self._match = re.search(self._regexp, self._banner, re.I | re.M)
             else:
                 self._match = None
@@ -66,12 +71,15 @@ class FingerprintHandler(ContentHandler):
                 self._feedInfo("dbmsVersion", self._match.group(int(self._dbmsVersion)))
 
             if self._techVersion and self._techVersion.isdigit():
-                self._feedInfo("technology", "%s %s" % (attrs.get("technology"), self._match.group(int(self._techVersion))))
+                self._feedInfo(
+                    "technology",
+                    f'{attrs.get("technology")} {self._match.group(int(self._techVersion))}',
+                )
             else:
                 self._feedInfo("technology", attrs.get("technology"))
 
             if self._sp.isdigit():
-                self._feedInfo("sp", "Service Pack %s" % int(self._sp))
+                self._feedInfo("sp", f"Service Pack {int(self._sp)}")
 
             self._regexp = None
             self._match = None
