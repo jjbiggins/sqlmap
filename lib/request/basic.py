@@ -111,20 +111,32 @@ def forgeHeaders(items=None, base=None):
                 if cookie is None or cookie.domain_specified and not (conf.hostname or "").endswith(cookie.domain):
                     continue
 
-                if ("%s=" % getUnicode(cookie.name)) in getUnicode(headers[HTTP_HEADER.COOKIE]):
+                if f"{getUnicode(cookie.name)}=" in getUnicode(
+                    headers[HTTP_HEADER.COOKIE]
+                ):
                     if conf.loadCookies:
                         conf.httpHeaders = filterNone((item if item[0] != HTTP_HEADER.COOKIE else None) for item in conf.httpHeaders)
                     elif kb.mergeCookies is None:
-                        message = "you provided a HTTP %s header value, while " % HTTP_HEADER.COOKIE
+                        message = f"you provided a HTTP {HTTP_HEADER.COOKIE} header value, while "
                         message += "target URL provides its own cookies within "
-                        message += "HTTP %s header which intersect with yours. " % HTTP_HEADER.SET_COOKIE
+                        message += f"HTTP {HTTP_HEADER.SET_COOKIE} header which intersect with yours. "
                         message += "Do you want to merge them in further requests? [Y/n] "
 
                         kb.mergeCookies = readInput(message, default='Y', boolean=True)
 
                     if kb.mergeCookies and kb.injection.place != PLACE.COOKIE:
                         def _(value):
-                            return re.sub(r"(?i)\b%s=[^%s]+" % (re.escape(getUnicode(cookie.name)), conf.cookieDel or DEFAULT_COOKIE_DELIMITER), ("%s=%s" % (getUnicode(cookie.name), getUnicode(cookie.value))).replace('\\', r'\\'), value)
+                            return re.sub(
+                                r"(?i)\b%s=[^%s]+"
+                                % (
+                                    re.escape(getUnicode(cookie.name)),
+                                    conf.cookieDel or DEFAULT_COOKIE_DELIMITER,
+                                ),
+                                f"{getUnicode(cookie.name)}={getUnicode(cookie.value)}".replace(
+                                    '\\', r'\\'
+                                ),
+                                value,
+                            )
 
                         headers[HTTP_HEADER.COOKIE] = _(headers[HTTP_HEADER.COOKIE])
 
@@ -134,7 +146,9 @@ def forgeHeaders(items=None, base=None):
                         conf.httpHeaders = [(item[0], item[1] if item[0] != HTTP_HEADER.COOKIE else _(item[1])) for item in conf.httpHeaders]
 
                 elif not kb.testMode:
-                    headers[HTTP_HEADER.COOKIE] += "%s %s=%s" % (conf.cookieDel or DEFAULT_COOKIE_DELIMITER, getUnicode(cookie.name), getUnicode(cookie.value))
+                    headers[
+                        HTTP_HEADER.COOKIE
+                    ] += f"{conf.cookieDel or DEFAULT_COOKIE_DELIMITER} {getUnicode(cookie.name)}={getUnicode(cookie.value)}"
 
         if kb.testMode and not any((conf.csrfToken, conf.safeUrl)):
             resetCookieJar(conf.cj)
@@ -153,7 +167,7 @@ def parseResponse(page, headers, status=None):
         headersParser(headers)
 
     if page:
-        htmlParser(page if not status else "%s\n\n%s" % (status, page))
+        htmlParser("%s\n\n%s" % (status, page) if status else page)
 
 @cachedmethod
 def checkCharEncoding(encoding, warn=True):
@@ -207,17 +221,17 @@ def checkCharEncoding(encoding, warn=True):
 
     # name adjustment for compatibility
     if encoding.startswith("8859"):
-        encoding = "iso-%s" % encoding
+        encoding = f"iso-{encoding}"
     elif encoding.startswith("cp-"):
-        encoding = "cp%s" % encoding[3:]
+        encoding = f"cp{encoding[3:]}"
     elif encoding.startswith("euc-"):
-        encoding = "euc_%s" % encoding[4:]
+        encoding = f"euc_{encoding[4:]}"
     elif encoding.startswith("windows") and not encoding.startswith("windows-"):
-        encoding = "windows-%s" % encoding[7:]
+        encoding = f"windows-{encoding[7:]}"
     elif encoding.find("iso-88") > 0:
         encoding = encoding[encoding.find("iso-88"):]
     elif encoding.startswith("is0-"):
-        encoding = "iso%s" % encoding[4:]
+        encoding = f"iso{encoding[4:]}"
     elif encoding.find("ascii") > 0:
         encoding = "ascii"
     elif encoding.find("utf8") > 0:
@@ -243,7 +257,7 @@ def checkCharEncoding(encoding, warn=True):
             six.text_type(getBytes(randomStr()), encoding)
         except:
             if warn:
-                warnMsg = "invalid web page charset '%s'" % encoding
+                warnMsg = f"invalid web page charset '{encoding}'"
                 singleTimeLogMessage(warnMsg, logging.WARN, encoding)
             encoding = None
 
@@ -264,7 +278,7 @@ def getHeuristicCharEncoding(page):
     kb.cache.encoding[key] = retVal
 
     if retVal and retVal.lower().replace('-', "") == UNICODE_ENCODING.lower().replace('-', ""):
-        infoMsg = "heuristics detected web page charset '%s'" % retVal
+        infoMsg = f"heuristics detected web page charset '{retVal}'"
         singleTimeLogMessage(infoMsg, logging.INFO, retVal)
 
     return retVal
@@ -287,11 +301,7 @@ def decodePage(page, contentEncoding, contentType, percentDecode=True):
     else:
         contentEncoding = ""
 
-    if hasattr(contentType, "lower"):
-        contentType = contentType.lower()
-    else:
-        contentType = ""
-
+    contentType = contentType.lower() if hasattr(contentType, "lower") else ""
     if contentEncoding in ("gzip", "x-gzip", "deflate"):
         if not kb.pageCompress:
             return None
@@ -309,7 +319,7 @@ def decodePage(page, contentEncoding, contentType, percentDecode=True):
         except Exception as ex:
             if b"<html" not in page:  # in some cases, invalid "Content-Encoding" appears for plain HTML (should be ignored)
                 errMsg = "detected invalid data for declared content "
-                errMsg += "encoding '%s' ('%s')" % (contentEncoding, getSafeExString(ex))
+                errMsg += f"encoding '{contentEncoding}' ('{getSafeExString(ex)}')"
                 singleTimeLogMessage(errMsg, logging.ERROR)
 
                 warnMsg = "turning off page compression"
@@ -329,7 +339,7 @@ def decodePage(page, contentEncoding, contentType, percentDecode=True):
 
         if (any((httpCharset, metaCharset)) and (not all((httpCharset, metaCharset)) or isinstance(page, six.binary_type) and all(_ in PRINTABLE_BYTES for _ in page))) or (httpCharset == metaCharset and all((httpCharset, metaCharset))):
             kb.pageEncoding = httpCharset or metaCharset  # Reference: http://bytes.com/topic/html-css/answers/154758-http-equiv-vs-true-header-has-precedence
-            debugMsg = "declared web page charset '%s'" % kb.pageEncoding
+            debugMsg = f"declared web page charset '{kb.pageEncoding}'"
             singleTimeLogMessage(debugMsg, logging.DEBUG, debugMsg)
         else:
             kb.pageEncoding = None
@@ -345,10 +355,9 @@ def decodePage(page, contentEncoding, contentType, percentDecode=True):
                 page = re.sub(b"&#(\\d{1,3});", lambda _: six.int2byte(int(_.group(1))) if int(_.group(1)) < 256 else _.group(0), page)
 
             # e.g. %20%28%29
-            if percentDecode:
-                if b"%" in page:
-                    page = re.sub(b"%([0-9a-f]{2})", lambda _: decodeHex(_.group(1)), page)
-                    page = re.sub(b"%([0-9A-F]{2})", lambda _: decodeHex(_.group(1)), page)     # Note: %DeepSee_SQL in CACHE
+            if percentDecode and b"%" in page:
+                page = re.sub(b"%([0-9a-f]{2})", lambda _: decodeHex(_.group(1)), page)
+                page = re.sub(b"%([0-9A-F]{2})", lambda _: decodeHex(_.group(1)), page)     # Note: %DeepSee_SQL in CACHE
 
             # e.g. &amp;
             page = re.sub(b"&([^;]+);", lambda _: six.int2byte(HTML_ENTITIES[getText(_.group(1))]) if HTML_ENTITIES.get(getText(_.group(1)), 256) < 256 else _.group(0), page)
@@ -393,10 +402,8 @@ def processResponse(page, responseHeaders, code=None, status=None):
         kb.tableFrom = None
 
     if conf.parseErrors:
-        msg = extractErrorMessage(page)
-
-        if msg:
-            logger.warning("parsed DBMS error message: '%s'" % msg.rstrip('.'))
+        if msg := extractErrorMessage(page):
+            logger.warning(f"parsed DBMS error message: '{msg.rstrip('.')}'")
 
     if not conf.skipWaf and kb.processResponseCounter < IDENTYWAF_PARSE_LIMIT:
         rawResponse = "%s %s %s\n%s\n%s" % (_http_client.HTTPConnection._http_vsn_str, code or "", status or "", "".join(getUnicode(responseHeaders.headers if responseHeaders else [])), page[:HEURISTIC_PAGE_SIZE_THRESHOLD])
@@ -407,7 +414,7 @@ def processResponse(page, responseHeaders, code=None, status=None):
                 for waf in set(identYwaf.non_blind):
                     if waf not in kb.identifiedWafs:
                         kb.identifiedWafs.add(waf)
-                        errMsg = "WAF/IPS identified as '%s'" % identYwaf.format_name(waf)
+                        errMsg = f"WAF/IPS identified as '{identYwaf.format_name(waf)}'"
                         singleTimeLogMessage(errMsg, logging.CRITICAL)
 
     if kb.originalPage is None:
@@ -418,14 +425,17 @@ def processResponse(page, responseHeaders, code=None, status=None):
                 if PLACE.POST in conf.paramDict and name in conf.paramDict[PLACE.POST]:
                     if conf.paramDict[PLACE.POST][name] in page:
                         continue
-                    else:
-                        msg = "do you want to automatically adjust the value of '%s'? [y/N]" % name
+                    msg = f"do you want to automatically adjust the value of '{name}'? [y/N]"
 
-                        if not readInput(msg, default='N', boolean=True):
-                            continue
+                    if not readInput(msg, default='N', boolean=True):
+                        continue
 
-                        conf.paramDict[PLACE.POST][name] = value
-                conf.parameters[PLACE.POST] = re.sub(r"(?i)(%s=)[^&]+" % re.escape(name), r"\g<1>%s" % value.replace('\\', r'\\'), conf.parameters[PLACE.POST])
+                    conf.paramDict[PLACE.POST][name] = value
+                conf.parameters[PLACE.POST] = re.sub(
+                    f"(?i)({re.escape(name)}=)[^&]+",
+                    r"\g<1>%s" % value.replace('\\', r'\\'),
+                    conf.parameters[PLACE.POST],
+                )
 
     if not kb.browserVerification and re.search(r"(?i)browser.?verification", page or ""):
         kb.browserVerification = True

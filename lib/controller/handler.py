@@ -147,9 +147,8 @@ def setHandler():
             else:
                 kb.dbms = conf.dbms = conf.forceDbms = dbms
 
-        if kb.dbmsFilter:
-            if dbms not in kb.dbmsFilter:
-                continue
+        if kb.dbmsFilter and dbms not in kb.dbmsFilter:
+            continue
 
         handler = Handler()
         conf.dbmsConnector = Connector()
@@ -174,13 +173,11 @@ def setHandler():
                 except Exception as ex:
                     if exception:
                         raise exception
-                    else:
-                        if not isinstance(ex, NameError):
-                            raise
-                        else:
-                            msg = "support for direct connection to '%s' is not available. " % dbms
-                            msg += "Please rerun with '--dependencies'"
-                            raise SqlmapConnectionException(msg)
+                    if not isinstance(ex, NameError):
+                        raise
+                    msg = f"support for direct connection to '{dbms}' is not available. "
+                    msg += "Please rerun with '--dependencies'"
+                    raise SqlmapConnectionException(msg)
 
         if conf.forceDbms == dbms or handler.checkDbms():
             if kb.resolutionDbms:

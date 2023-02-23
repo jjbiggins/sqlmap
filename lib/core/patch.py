@@ -81,8 +81,8 @@ def dirtyPatches():
     thirdparty.chardet.universaldetector.MINIMUM_THRESHOLD = 0.90
 
     match = re.search(r" --method[= ](\w+)", " ".join(sys.argv))
-    if match and match.group(1).upper() != PLACE.POST:
-        PLACE.CUSTOM_POST = PLACE.CUSTOM_POST.replace("POST", "%s (body)" % match.group(1))
+    if match and match[1].upper() != PLACE.POST:
+        PLACE.CUSTOM_POST = PLACE.CUSTOM_POST.replace("POST", f"{match[1]} (body)")
 
     # https://github.com/sqlmapproject/sqlmap/issues/4314
     try:

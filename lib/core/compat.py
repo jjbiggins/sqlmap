@@ -298,11 +298,9 @@ def LooseVersion(version):
     8.000022
     """
 
-    match = re.search(r"\A(\d[\d.]*)", version or "")
-
-    if match:
+    if match := re.search(r"\A(\d[\d.]*)", version or ""):
         result = 0
-        value = match.group(1)
+        value = match[1]
         weight = 1.0
         for part in value.strip('.').split('.'):
             if part.isdigit():
